@@ -19,6 +19,7 @@ CollectorsOptions = collections.namedtuple('CollectorsOptions', [
     'cluster',
     'resources',
     'config',
+    'snapshots',
 ])
 
 class StatusCollector:
@@ -310,6 +311,39 @@ class ClusterNodeConfigCollector:
 
         return metrics.values()
 
+class SnapshotsCollector:
+    """
+    Collects info about QEMU VM Snapshots
+    """
+    def __init__(self,pve):
+        self._pve = pve
+
+    def collect(self):
+        snapshots_metric = GaugeMetricFamily(
+            'pve_snapshots',
+            'Proxmox VM Snapshot',
+            labels=['id', 'node', 'description','name','vmstate','snaptime','vmname'])
+        
+        for node in self._pve.nodes.get():
+            #print(node)
+            try:
+                for vmdata in self._pve.nodes(node['node']).qemu.get():
+                    #print(vmdata)
+                    snapshots = self._pve.nodes(node['node']).qemu(vmdata['vmid']).snapshot.get()
+                    for snapshot in snapshots:
+                        #print (snapshot)
+                        if snapshot['name'] != 'current':
+                            label_values = [f'{vmdata["vmid"]}',node['node'],snapshot['description'],snapshot['name'],f'{snapshot["vmstate"]}',f'{snapshot["snaptime"]}',vmdata['name']]
+                            snapshots_metric.add_metric(label_values,1)
+            except ResourceException:
+                self._log.exception(
+                    "Exception thrown while scraping quemu/lxc snapshots from %s",
+                    node['node']
+                )
+                continue
+        return [snapshots_metric]
+
+
 def collect_pve(config, host, options: CollectorsOptions):
     """Scrape a host and return prometheus text format for it"""
 
@@ -328,5 +362,6 @@ def collect_pve(config, host, options: CollectorsOptions):
         registry.register(ClusterNodeConfigCollector(pve))
     if options.version:
         registry.register(VersionCollector(pve))
-
+    if options.snapshots:
+        registry.register(SnapshotsCollector(pve))
     return generate_latest(registry)

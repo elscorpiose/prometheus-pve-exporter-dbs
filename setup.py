@@ -2,9 +2,9 @@ from setuptools import find_packages
 from setuptools import setup
 
 setup(
-    name="prometheus-pve-exporter",
-    version="2.3.1",
-    author="Lorenz Schori",
+    name="ipt-prometheus-pve-exporter",
+    version="2.3.1a",
+    author="Lorenz Schori with tweaks by Konstantin Samarin",
     author_email="lo@znerol.ch",
     description=("Proxmox VE exporter for the Prometheus monitoring system."),
     long_description=open('README.rst').read(),
