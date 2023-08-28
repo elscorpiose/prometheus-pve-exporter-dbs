@@ -102,7 +102,8 @@ def main():
         node=params.collector_node,
         cluster=params.collector_cluster,
         resources=params.collector_resources,
-        config=params.collector_config
+        config=params.collector_config,
+        snapshots=params.collector_snapshots
     )
 
     # Load configuration.
