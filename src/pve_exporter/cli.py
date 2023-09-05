@@ -85,6 +85,9 @@ def main():
     parser.add_argument('--collector.snapshots', dest='collector_snapshots',
                         action=BooleanOptionalAction, default=True,
                         help='Exposes PVE VM Snapshots')
+    parser.add_argument('--collector.backups', dest='collector_backups',
+                        action=BooleanOptionalAction, default=True,
+                        help='Exposes PVE VM Backups')
     parser.add_argument('config', nargs='?', default='pve.yml',
                         help='Path to configuration file (pve.yml)')
     parser.add_argument('port', nargs='?', type=int, default='9221',
@@ -103,7 +106,8 @@ def main():
         cluster=params.collector_cluster,
         resources=params.collector_resources,
         config=params.collector_config,
-        snapshots=params.collector_snapshots
+        snapshots=params.collector_snapshots,
+        backups=params.collector_backups
     )
 
     # Load configuration.

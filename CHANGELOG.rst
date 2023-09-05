@@ -9,6 +9,19 @@ The format is based on `Keep a Changelog`_ and this project adheres to
 `Unreleased`_
 -------------
 
+`2.3.1a2`_ - 2023-09-05
+---------------------
+
+Added
+- Add PBS storage backup information gathering function
+
+
+`2.3.1a1`_ - 2023-08-28
+---------------------
+
+Added
+- Added QEMU VMs snapshot collection function
+
 `2.3.1`_ - 2023-08-02
 ---------------------
 

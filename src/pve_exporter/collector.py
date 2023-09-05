@@ -2,7 +2,7 @@
 Prometheus collecters for Proxmox VE cluster.
 """
 # pylint: disable=too-few-public-methods
-
+import random
 import collections
 import itertools
 import logging
@@ -20,6 +20,7 @@ CollectorsOptions = collections.namedtuple('CollectorsOptions', [
     'resources',
     'config',
     'snapshots',
+    'backups'
 ])
 
 class StatusCollector:
@@ -319,10 +320,10 @@ class SnapshotsCollector:
         self._pve = pve
 
     def collect(self):
-        snapshots_metric = GaugeMetricFamily(
+        snapshots_metrics = GaugeMetricFamily(
             'pve_snapshots',
             'Proxmox VM Snapshot',
-            labels=['id', 'node', 'description','name','vmstate','snaptime','vmname'])
+            labels=['id', 'node', 'description','name','vmstate','vmname'])#snaptime
         
         for node in self._pve.nodes.get():
             #print(node)
@@ -333,15 +334,49 @@ class SnapshotsCollector:
                     for snapshot in snapshots:
                         #print (snapshot)
                         if snapshot['name'] != 'current':
-                            label_values = [f'{vmdata["vmid"]}',node['node'],snapshot['description'],snapshot['name'],f'{snapshot["vmstate"]}',f'{snapshot["snaptime"]}',vmdata['name']]
-                            snapshots_metric.add_metric(label_values,1)
+                            label_values = [f'{vmdata["vmid"]}',node['node'],snapshot['description'],snapshot['name'],f'{snapshot["vmstate"]}',vmdata['name']]#,f'{snapshot["snaptime"]}'
+                            snapshots_metrics.add_metric(label_values,snapshot["snaptime"])
             except ResourceException:
                 self._log.exception(
                     "Exception thrown while scraping quemu/lxc snapshots from %s",
                     node['node']
                 )
                 continue
-        return [snapshots_metric]
+        return [snapshots_metrics]
+
+
+
+
+class BackupStorageCollector:
+    """
+    Collects Proxmox VE backups from pbs storage,
+    needs PVEDataStoreAdmin permission (maybe lower, but i stopped at this level) on said pbs storage
+
+    # HELP pve_backups Backups info
+    # TYPE pve_backups gauge
+    pve_backups{id=;size=;state=;timestamp=;vmname=} 1.0
+
+    """
+
+    def __init__(self, pve):
+        self._pve = pve
+
+    def collect(self): # pylint: disable=missing-docstring
+        cluster_min = int(self._pve.cluster.options.get()["next-id"]["lower"])
+        cluster_max = int(self._pve.cluster.options.get()["next-id"]["upper"])
+        node = random.choice(self._pve.nodes.get())
+        for pbs_storage in [entry for entry in self._pve.nodes(node['node']).storage.get() if entry['type'] == 'pbs']:
+            info_backups_metrics = GaugeMetricFamily(
+                'pve_backups',
+                'Backups info',
+                labels=['vmname','size','timestamp','id','state','storage'])
+            pbs_backups = self._pve.nodes(node['node']).storage(pbs_storage['storage']).content.get()
+            if pbs_backups:
+                for pbs_backup in pbs_backups:
+                    if pbs_backup["vmid"] < cluster_max and pbs_backup["vmid"] > cluster_min:
+                        info_backups_metrics.add_metric((pbs_backup['notes'],f'{pbs_backup["size"]}',f'{pbs_backup["ctime"]}',f'{pbs_backup["vmid"]}',pbs_backup['verification']['state'],pbs_storage['storage']), 1)
+
+        yield info_backups_metrics
 
 
 def collect_pve(config, host, options: CollectorsOptions):
@@ -364,4 +399,6 @@ def collect_pve(config, host, options: CollectorsOptions):
         registry.register(VersionCollector(pve))
     if options.snapshots:
         registry.register(SnapshotsCollector(pve))
+    if options.backups:
+        registry.register(BackupStorageCollector(pve))
     return generate_latest(registry)
