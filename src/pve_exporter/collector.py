@@ -382,7 +382,7 @@ class BackupStorageCollector:
 def collect_pve(config, host, options: CollectorsOptions):
     """Scrape a host and return prometheus text format for it"""
 
-    pve = ProxmoxAPI(host, **config)
+    pve = ProxmoxAPI(host, **config,timeout=15)
 
     registry = CollectorRegistry()
     if options.status:

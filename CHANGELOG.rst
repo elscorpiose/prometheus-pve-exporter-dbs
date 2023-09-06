@@ -9,6 +9,13 @@ The format is based on `Keep a Changelog`_ and this project adheres to
 `Unreleased`_
 -------------
 
+`2.3.1a3`_ - 2023-09-06
+---------------------
+
+Changed
+- Added timeout=15 for ProxmoxAPI. Will it work? who knows...
+
+
 `2.3.1a2`_ - 2023-09-05
 ---------------------
 
