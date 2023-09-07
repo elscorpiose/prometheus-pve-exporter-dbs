@@ -9,6 +9,17 @@ The format is based on `Keep a Changelog`_ and this project adheres to
 `Unreleased`_
 -------------
 
+`2.3.1a4`_ - 2023-09-06
+---------------------
+
+Changed
+- Fix: do not crush on empty verification propery for backups 
+
+Added
+- new metric - missed backup. was in backup pool but no backups finded
+- new metric - orphaned backup. there is backup but vm not in backup pool
+
+
 `2.3.1a3`_ - 2023-09-06
 ---------------------
 

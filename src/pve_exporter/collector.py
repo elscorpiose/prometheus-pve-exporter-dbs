@@ -364,25 +364,69 @@ class BackupStorageCollector:
     def collect(self): # pylint: disable=missing-docstring
         cluster_min = int(self._pve.cluster.options.get()["next-id"]["lower"])
         cluster_max = int(self._pve.cluster.options.get()["next-id"]["upper"])
+        pools_vmid = {}
+        backups_vmid = []
+        pools_vms=[]
+        backup_storage_labels = ['avail','used','used_fraction','storage','shared','active']
+        backups_labels = ['vmname','size','timestamp','id','state','storage','pool']
+        info_missing_backups = GaugeMetricFamily(
+            'pve_missing_backups',
+            'VM is in pool but no backup finded',
+            labels=['vmid','vmname','status','node','pool']
+        )
+        info_backup_storage = GaugeMetricFamily(
+            'pve_backup_storage',
+            'metrics for PBS',
+            labels = backup_storage_labels)
+        info_orphaned_backups = GaugeMetricFamily(
+            'pve_orphaned_backups',
+            'VM is with backup but not in pool',
+            labels = backups_labels)
+        info_backups_metrics = GaugeMetricFamily(
+            'pve_backups',
+            'Backups info',
+            labels=backups_labels)
+        for pool in self._pve.pools.get():
+            for pool_vm in self._pve.pools(pool['poolid']).get()['members']:
+                pools_vmid[pool_vm['vmid']]=pool['poolid']
+                pools_vms.append(pool_vm)    
         node = random.choice(self._pve.nodes.get())
         for pbs_storage in [entry for entry in self._pve.nodes(node['node']).storage.get() if entry['type'] == 'pbs']:
-            info_backups_metrics = GaugeMetricFamily(
-                'pve_backups',
-                'Backups info',
-                labels=['vmname','size','timestamp','id','state','storage'])
-            pbs_backups = self._pve.nodes(node['node']).storage(pbs_storage['storage']).content.get()
-            if pbs_backups:
-                for pbs_backup in pbs_backups:
-                    if pbs_backup["vmid"] < cluster_max and pbs_backup["vmid"] > cluster_min:
-                        info_backups_metrics.add_metric((pbs_backup['notes'],f'{pbs_backup["size"]}',f'{pbs_backup["ctime"]}',f'{pbs_backup["vmid"]}',pbs_backup['verification']['state'],pbs_storage['storage']), 1)
-
-        yield info_backups_metrics
+            if pbs_storage:
+                #for label in info_backup_storage.labels:
+                label_values = [str(pbs_storage[key]) for key in backup_storage_labels]
+                if label_values:
+                    info_backup_storage.add_metric(label_values,1)
+                pbs_backups = self._pve.nodes(node['node']).storage(pbs_storage['storage']).content.get()
+                if pbs_backups:
+                    for pbs_backup in pbs_backups:
+                        backups_vmid.append(pbs_backup['vmid'])
+                        if pbs_backup["vmid"] < cluster_max and pbs_backup["vmid"] > cluster_min:
+                            if 'verification' in pbs_backup:
+                                verification = pbs_backup['verification']['state']
+                            else:
+                                verification = 'none'
+                            if pbs_backup['vmid'] not in pools_vmid.keys():
+                                info_orphaned_backups.add_metric((pbs_backup['notes'],f'{pbs_backup["size"]}',f'{pbs_backup["ctime"]}',f'{pbs_backup["vmid"]}',verification,pbs_storage['storage'],'none'), 1)
+                            else:
+                                info_backups_metrics.add_metric((pbs_backup['notes'],f'{pbs_backup["size"]}',f'{pbs_backup["ctime"]}',f'{pbs_backup["vmid"]}',verification,pbs_storage['storage'],pools_vmid[pbs_backup["vmid"]]), 1)
+        for pools_vm in pools_vms:
+            if pools_vm['vmid'] not in backups_vmid:
+                info_missing_backups.add_metric((f'{pools_vm["vmid"]}',pools_vm['name'],pools_vm['status'],pools_vm['node'],pools_vmid[pools_vm['vmid']]),1)
+        bkp_metrics={
+            'orphaned_backups': info_orphaned_backups, 
+            'backup_storage': info_backup_storage,
+            'missing_backups': info_missing_backups,
+            'backups_metrics': info_backups_metrics
+        }
+        #bkp_metrics = itertools.chain(info_backups_metrics_2,info_backups_metrics)
+        return bkp_metrics.values()#info_backups_metrics
 
 
 def collect_pve(config, host, options: CollectorsOptions):
     """Scrape a host and return prometheus text format for it"""
 
-    pve = ProxmoxAPI(host, **config,timeout=15)
+    pve = ProxmoxAPI(host, **config,timeout=25)
 
     registry = CollectorRegistry()
     if options.status:
