@@ -69,22 +69,25 @@ class VersionCollector:
     pve_version_info{release="15",repoid="7599e35a",version="4.4"} 1.0
     """
 
-    LABEL_WHITELIST = ['release', 'repoid', 'version']
+    
+
 
     def __init__(self, pve):
         self._pve = pve
 
     def collect(self): # pylint: disable=missing-docstring
-        version_items = self._pve.version.get().items()
-        version = {key: value for key, value in version_items if key in self.LABEL_WHITELIST}
-
-        labels, label_values = zip(*version.items())
+        LABEL_WHITELIST = ['release', 'repoid', 'version','node']
         metric = GaugeMetricFamily(
-            'pve_version_info',
-            'Proxmox VE version info',
-            labels=labels
-        )
-        metric.add_metric(label_values, 1)
+        'pve_version_info',
+        'Proxmox VE version info',
+        labels=LABEL_WHITELIST
+        
+        )    
+        for node in self._pve.nodes.get():
+            version = self._pve.nodes(node['node']).version.get()
+            #version = {key: value for key, value in version_items if key in LABEL_WHITELIST}
+            #LABEL_WHITELIST, label_values = zip(*version.items())
+            metric.add_metric((version['release'],version['repoid'],version['version'],node['node']), 1)
 
         yield metric
 
@@ -402,14 +405,18 @@ class BackupStorageCollector:
                     for pbs_backup in pbs_backups:
                         backups_vmid.append(pbs_backup['vmid'])
                         if pbs_backup["vmid"] < cluster_max and pbs_backup["vmid"] > cluster_min:
+                            if 'notes' in pbs_backup.keys():
+                                vm_backup_note = pbs_backup['notes']
+                            else:
+                                vm_backup_note = f'{pbs_backup["vmid"]}'
                             if 'verification' in pbs_backup:
                                 verification = pbs_backup['verification']['state']
                             else:
                                 verification = 'none'
                             if pbs_backup['vmid'] not in pools_vmid.keys():
-                                info_orphaned_backups.add_metric((pbs_backup['notes'],f'{pbs_backup["size"]}',f'{pbs_backup["ctime"]}',f'{pbs_backup["vmid"]}',verification,pbs_storage['storage'],'none'), 1)
+                                info_orphaned_backups.add_metric((vm_backup_note,f'{pbs_backup["size"]}',f'{pbs_backup["ctime"]}',f'{pbs_backup["vmid"]}',verification,pbs_storage['storage'],'none'), 1)
                             else:
-                                info_backups_metrics.add_metric((pbs_backup['notes'],f'{pbs_backup["size"]}',f'{pbs_backup["ctime"]}',f'{pbs_backup["vmid"]}',verification,pbs_storage['storage'],pools_vmid[pbs_backup["vmid"]]), 1)
+                                info_backups_metrics.add_metric((vm_backup_note,f'{pbs_backup["size"]}',f'{pbs_backup["ctime"]}',f'{pbs_backup["vmid"]}',verification,pbs_storage['storage'],pools_vmid[pbs_backup["vmid"]]), 1)
         for pools_vm in pools_vms:
             if pools_vm['vmid'] not in backups_vmid:
                 info_missing_backups.add_metric((f'{pools_vm["vmid"]}',pools_vm['name'],pools_vm['status'],pools_vm['node'],pools_vmid[pools_vm['vmid']]),1)

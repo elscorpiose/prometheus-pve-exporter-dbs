@@ -9,6 +9,28 @@ The format is based on `Keep a Changelog`_ and this project adheres to
 `Unreleased`_
 -------------
 
+`2.3.1a6`_ - 2023-10-12
+---------------------
+
+Fixed
+- fix for previous fix
+
+
+`2.3.1a6`_ - 2023-10-12
+---------------------
+
+Fixed
+- While backing up there is no vmname in notes, fix to use vmid instead if encountered
+
+
+
+`2.3.1a5`_ - 2023-09-08
+---------------------
+
+Changed
+- versions are shown for all nodes, for collection from one point
+
+
 `2.3.1a4`_ - 2023-09-06
 ---------------------
 
