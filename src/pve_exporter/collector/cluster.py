@@ -2,7 +2,7 @@
 Prometheus collecters for Proxmox VE cluster.
 """
 # pylint: disable=too-few-public-methods
-
+import random
 import itertools
 
 from prometheus_client.core import GaugeMetricFamily
@@ -253,29 +253,23 @@ class SnapshotsCollector:
     def __init__(self,pve):
         self._pve = pve
 
-    def collect(self):
+    def collect(self): # pylint: disable=missing-docstring
         snapshots_metrics = GaugeMetricFamily(
             'pve_snapshots',
             'Proxmox VM Snapshot',
             labels=['id', 'node', 'description','name','vmstate','vmname'])#snaptime
-        
+
         for node in self._pve.nodes.get():
             #print(node)
-            try:
-                for vmdata in self._pve.nodes(node['node']).qemu.get():
-                    #print(vmdata)
-                    snapshots = self._pve.nodes(node['node']).qemu(vmdata['vmid']).snapshot.get()
-                    for snapshot in snapshots:
-                        #print (snapshot)
-                        if snapshot['name'] != 'current':
-                            label_values = [f'{vmdata["vmid"]}',node['node'],snapshot['description'],snapshot['name'],f'{snapshot["vmstate"]}',vmdata['name']]#,f'{snapshot["snaptime"]}'
-                            snapshots_metrics.add_metric(label_values,snapshot["snaptime"])
-            except ResourceException:
-                self._log.exception(
-                    "Exception thrown while scraping quemu/lxc snapshots from %s",
-                    node['node']
-                )
-                continue
+            for vmdata in self._pve.nodes(node['node']).qemu.get():
+                #print(vmdata)
+                snapshots = self._pve.nodes(node['node']).qemu(vmdata['vmid']).snapshot.get()
+                for snapshot in snapshots:
+                    #print (snapshot)
+                    if snapshot['name'] != 'current':
+                        label_values = [f'{vmdata["vmid"]}',node['node'],snapshot['description'],snapshot['name'],f'{snapshot["vmstate"]}',vmdata['name']]
+                        #,f'{snapshot["snaptime"]}'
+                        snapshots_metrics.add_metric(label_values,snapshot["snaptime"])
         return [snapshots_metrics]
 
 
@@ -295,7 +289,7 @@ class BackupStorageCollector:
     def __init__(self, pve):
         self._pve = pve
 
-    def collect(self): # pylint: disable=missing-docstring
+    def collect(self): # pylint: disable=missing-docstring disable=line-too-long
         cluster_min = int(self._pve.cluster.options.get()["next-id"]["lower"])
         cluster_max = int(self._pve.cluster.options.get()["next-id"]["upper"])
         pools_vmid = {}
