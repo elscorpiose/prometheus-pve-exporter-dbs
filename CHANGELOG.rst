@@ -9,58 +9,230 @@ The format is based on `Keep a Changelog`_ and this project adheres to
 `Unreleased`_
 -------------
 
-`2.3.1a6`_ - 2023-10-12
+`3.4.5a1`_ - 2024-09-16
 ---------------------
 
-Fixed
-- fix for previous fix
-
-
-`2.3.1a6`_ - 2023-10-12
----------------------
-
-Fixed
-- While backing up there is no vmname in notes, fix to use vmid instead if encountered
-
-
-
-`2.3.1a5`_ - 2023-09-08
----------------------
-
-Changed
-- versions are shown for all nodes, for collection from one point
-
-
-`2.3.1a4`_ - 2023-09-06
----------------------
-
-Changed
-- Fix: do not crush on empty verification propery for backups 
-
-Added
-- new metric - missed backup. was in backup pool but no backups finded
-- new metric - orphaned backup. there is backup but vm not in backup pool
-
-
-`2.3.1a3`_ - 2023-09-06
----------------------
-
-Changed
-- Added timeout=15 for ProxmoxAPI. Will it work? who knows...
-
-
-`2.3.1a2`_ - 2023-09-05
----------------------
-
-Added
+- Added - new metric - missed backup. was in backup pool but no backups finded - new metric - orphaned backup. there is backup but vm not in backup pool
+- Added timeout=15
 - Add PBS storage backup information gathering function
+- Added QEMU VMs snapshot collection function
 
 
-`2.3.1a1`_ - 2023-08-28
+`3.4.5`_ - 2024-09-16
+---------------------
+
+- Bump cryptography to 43.0.1 (#283)
+- Bump paramiko from 3.4.1 to 3.5.0 (#282)
+- Bump alpine from 3.20.2 to 3.20.3 (#281)
+- Bump werkzeug from 3.0.3 to 3.0.4 (#277)
+
+
+`3.4.4`_ - 2024-08-15
+---------------------
+
+- Bump pyyaml from 6.0.1 to 6.0.2 (#274)
+- Bump proxmoxer from 2.0.1 to 2.1.0 (#273)
+- Bump paramiko from 3.4.0 to 3.4.1 (#272)
+- Bump gunicorn from 22.0.0 to 23.0.0 (#271)
+- Bump alpine from 3.20.1 to 3.20.2 (#269)
+- Bump certifi from 2023.11.17 to 2024.7.4 (#263)
+
+
+`3.4.3`_ - 2024-07-03
+---------------------
+
+Changed
+~~~~~~~
+
+- Bump alpine from 3.19.1 to 3.20.1 (#260)
+- Bump urllib3 from 2.1.0 to 2.2.2 (#259)
+- Bump requests from 2.32.0 to 2.32.3 (#256)
+- Bump docker/build-push-action from 5 to 6 (#258)
+
+
+`3.4.2`_ - 2024-05-26
+---------------------
+
+Changed
+~~~~~~~
+
+- Bump requests from 2.31.0 to 2.32.0 (#251)
+
+
+`3.4.1`_ - 2024-05-06
+---------------------
+
+Changed
+~~~~~~~
+
+- Bump werkzeug from 3.0.2 to 3.0.3 (#249)
+
+
+`3.4.0`_ - 2024-04-30
 ---------------------
 
 Added
-- Added QEMU VMs snapshot collection function
+~~~~~
+
+- Add tags label to pve_guest_info metric (#246)
+
+
+`3.3.0`_ - 2024-04-27
+---------------------
+
+Added
+~~~~~
+
+- Add ZFS replication metrics (#243)
+
+
+`3.2.5`_ - 2024-04-17
+---------------------
+
+Changed
+~~~~~~~
+
+- Bump gunicorn from 21.2.0 to 22.0.0 (#241)
+
+
+`3.2.4`_ - 2024-04-12
+---------------------
+
+Changed
+~~~~~~~
+
+- Bump idna from 3.6 to 3.7 (#239)
+- Bump werkzeug from 3.0.1 to 3.0.2 (#237)
+
+
+`3.2.3`_ - 2024-02-25
+---------------------
+
+Changed
+~~~~~~~
+
+- Bump cryptography from 42.0.2 to 42.0.4 (#232)
+
+
+`3.2.2`_ - 2024-02-06
+---------------------
+
+Changed
+~~~~~~~
+
+- Bump cryptography from 41.0.7 to 42.0.0 (#226)
+- Bump alpine container image version from 3.19.0 to 3.19.1 (#225)
+
+
+`3.2.1`_ - 2024-01-07
+---------------------
+
+Changed
+~~~~~~~
+
+- Build cffi and pyyaml from source (#222)
+- Use appropriate build tools to create dist for pypi (#220)
+
+
+`3.2.0`_ - 2024-01-06
+---------------------
+
+Changed
+~~~~~~~
+
+- Bump alpine from 3.18.5 to 3.19.0 (#216)
+- Update to pylint 3 (#218)
+- Use pyproject.toml, pip-compile and venv to build container image (#215)
+
+
+`3.1.0`_ - 2024-01-03
+---------------------
+
+Added
+~~~~~
+
+- Adding template label to pve_guest_info metric (#208)
+
+Changed
+~~~~~~~
+
+- Simplify container build spec (#210)
+- Fix coding style after template label addition (#209)
+- Bump actions/download-artifact from 3 to 4 (#205)
+- Bump actions/upload-artifact from 3 to 4 (#206)
+- Correct cluster and node params (#202)
+- Extract cluster and node collectors into separate files (#198)
+
+
+`3.0.2`_ - 2023-11-05
+---------------------
+
+Changed
+~~~~~~~
+
+- Specify same arguments for upload-artifact and download-artifact actions
+  (#196)
+
+
+`3.0.1`_ - 2023-11-05
+---------------------
+
+Changed
+~~~~~~~
+
+- Revert to deprecated way of building packages (#193)
+
+
+`3.0.0`_ - 2023-11-05
+---------------------
+
+Changed (BREAKING)
+~~~~~~~~~~~~~~~~~~
+- Use flags instead of positional arguments for config file and listen address
+  (#190)
+- Scrape /nodes endpoint from current node only (#180)
+- Remove tini from docker image (#179)
+- Bump required python version to 3.9 (bullseye) (#162)
+- Run with a dedicated user in container by default (#182)
+
+Changed
+~~~~~~~
+
+- Implement pypi trusted publishing workflow (#187)
+- Use PEP440 pattern when converting repo release tags into docker image tags (#183)
+- Remove references to develop branch (#181)
+- Update docker image to alpine 3.18.4 (#170)
+- Bump required python version to 3.9 (in README) (#169)
+- Remove fallback for BooleanOptionalAction (obsolete in python>=3.9) (#163)
+- Fix github actions (#161)
+- Bump actions/checkout from 2 to 4 (#177)
+- ci: add dependabot (#176)
+- ci: add arm64 image build (#175)
+
+
+`3.0.0b1`_ - 2023-10-16
+-----------------------
+
+Changed (BREAKING)
+~~~~~~~~~~~~~~~~~~
+- Scrape /nodes endpoint from current node only (#180)
+- Remove tini from docker image (#179)
+- Bump required python version to 3.9 (bullseye) (#162)
+- Run with a dedicated user in container by default (#182)
+
+Changed
+~~~~~~~
+- Use PEP440 pattern when converting repo release tags into docker image tags (#183)
+- Update docker image to alpine 3.18.4 (#170)
+- Remove fallback for BooleanOptionalAction (obsolete in python>=3.9) (#163)
+- Fix github actions (#161)
+- Bump actions/checkout from 2 to 4 (#177)
+
+Added
+~~~~~
+- ci: add dependabot (#176)
+- ci: add arm64 image build (#175)
+
 
 `2.3.1`_ - 2023-08-02
 ---------------------
@@ -293,9 +465,7 @@ Added
 
 .. _Keep a Changelog: http://keepachangelog.com/en/1.0.0/
 .. _Semantic Versioning: http://semver.org/spec/v2.0.0.html
-.. _Unreleased: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v2.3.1...HEAD
-.. _2.3.1: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v2.3.0...v2.3.1
-.. _2.3.0: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v2.2.4...v2.3.0
+.. _Unreleased: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v2.2.4...HEAD
 .. _2.2.3: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v2.2.3...v2.2.4
 .. _2.2.3: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v2.2.2...v2.2.3
 .. _2.2.2: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v2.2.1...v2.2.2

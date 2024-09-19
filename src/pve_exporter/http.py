@@ -4,21 +4,20 @@ HTTP API for Proxmox VE prometheus collector.
 
 import logging
 import time
+from functools import partial
 
 import gunicorn.app.base
 from prometheus_client import CONTENT_TYPE_LATEST, Summary, Counter, generate_latest
 from werkzeug.routing import Map, Rule
 from werkzeug.wrappers import Request, Response
 from werkzeug.exceptions import InternalServerError
-from .collector import collect_pve
+from pve_exporter.collector import collect_pve
 
 
 class PveExporterApplication:
     """
     Proxmox VE prometheus collector HTTP handler.
     """
-
-    # pylint: disable=no-self-use
 
     def __init__(self, config, duration, errors, collectors):
         self._config = config
@@ -28,18 +27,25 @@ class PveExporterApplication:
 
         self._log = logging.getLogger(__name__)
 
-    def on_pve(self, module='default', target='localhost'):
+    def on_pve(self, module='default', target='localhost', cluster='1', node='1'):
         """
         Request handler for /pve route
         """
 
         if module in self._config:
             start = time.time()
-            output = collect_pve(self._config[module], target, self._collectors)
+            output = collect_pve(
+                self._config[module],
+                target,
+                cluster.lower() not in ['false', '0', ''],
+                node.lower() not in ['false', '0', ''],
+                self._collectors
+            )
             response = Response(output)
             response.headers['content-type'] = CONTENT_TYPE_LATEST
             self._duration.labels(module).observe(time.time() - start)
         else:
+            response = Response("Module '{module}' not found in config")
             response = Response("Module '{module}' not found in config")
             response.status_code = 400
 
@@ -79,7 +85,7 @@ class PveExporterApplication:
         """
 
         allowed_args = {
-            'pve': ['module', 'target']
+            'pve': ['module', 'target', 'cluster', 'node']
         }
 
         view_registry = {
@@ -108,17 +114,14 @@ class PveExporterApplication:
         ])
 
         urls = url_map.bind_to_environ(request.environ)
-        view_func = lambda endpoint, values: self.view(endpoint, values, request.args)
+        view_func = partial(self.view, args=request.args)
         return urls.dispatch(view_func, catch_http_exceptions=True)
 
 
-class StandaloneGunicornApplication(gunicorn.app.base.BaseApplication):
+class StandaloneGunicornApplication(gunicorn.app.base.BaseApplication):#pylint: disable=abstract-method
     """
     Copy-paste from https://docs.gunicorn.org/en/stable/custom.html
     """
-
-    # 'init' and 'load' methods are implemented by WSGIApplication.
-    # pylint: disable=abstract-method
 
     def __init__(self, app, options=None):
         self.options = options or {}
@@ -159,4 +162,5 @@ def start_http_server(config, gunicorn_options, collectors):
         duration.labels(module)
 
     app = PveExporterApplication(config, duration, errors, collectors)
+    StandaloneGunicornApplication(app, gunicorn_options).run()
     StandaloneGunicornApplication(app, gunicorn_options).run()

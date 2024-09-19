@@ -2,10 +2,12 @@
 Prometheus collecters for Proxmox VE cluster.
 """
 # pylint: disable=too-few-public-methods
-import random
+
 import collections
 import itertools
 import logging
+
+from prometheus_client.registry import Collector
 from proxmoxer import ProxmoxAPI
 from proxmoxer.core import ResourceException
 
@@ -19,8 +21,8 @@ CollectorsOptions = collections.namedtuple('CollectorsOptions', [
     'cluster',
     'resources',
     'config',
-    'snapshots',
-    'backups'
+    'volumes',
+    'snapshots'
 ])
 
 class StatusCollector:
@@ -49,10 +51,10 @@ class StatusCollector:
                 label_values = [entry['id']]
                 status_metrics.add_metric(label_values, entry['online'])
             elif entry['type'] == 'cluster':
-                label_values = [f"cluster/{entry['name']}"]
+                label_values = ['cluster/{:s}'.format(entry['name'])]
                 status_metrics.add_metric(label_values, entry['quorate'])
             else:
-                raise ValueError(f"Got unexpected status entry type {entry['type']}")
+                raise ValueError('Got unexpected status entry type {:s}'.format(entry['type']))
 
         for resource in self._pve.cluster.resources.get(type='vm'):
             label_values = [resource['id']]
@@ -69,25 +71,22 @@ class VersionCollector:
     pve_version_info{release="15",repoid="7599e35a",version="4.4"} 1.0
     """
 
-    
-
+    LABEL_WHITELIST = ['release', 'repoid', 'version']
 
     def __init__(self, pve):
         self._pve = pve
 
     def collect(self): # pylint: disable=missing-docstring
-        LABEL_WHITELIST = ['release', 'repoid', 'version','node']
+        version_items = self._pve.version.get().items()
+        version = {key: value for key, value in version_items if key in self.LABEL_WHITELIST}
+
+        labels, label_values = zip(*version.items())
         metric = GaugeMetricFamily(
-        'pve_version_info',
-        'Proxmox VE version info',
-        labels=LABEL_WHITELIST
-        
-        )    
-        for node in self._pve.nodes.get():
-            version = self._pve.nodes(node['node']).version.get()
-            #version = {key: value for key, value in version_items if key in LABEL_WHITELIST}
-            #LABEL_WHITELIST, label_values = zip(*version.items())
-            metric.add_metric((version['release'],version['repoid'],version['version'],node['node']), 1)
+            'pve_version_info',
+            'Proxmox VE version info',
+            labels=labels
+        )
+        metric.add_metric(label_values, 1)
 
         yield metric
 
@@ -142,7 +141,7 @@ class ClusterInfoCollector:
 
             # Add cluster-prefix to id.
             for cluster in clusters:
-                cluster['id'] = f"cluster/{cluster['name']}"
+                cluster['id'] = 'cluster/{:s}'.format(cluster['name'])
                 del cluster['name']
 
             # Yield remaining data.
@@ -172,7 +171,7 @@ class ClusterResourcesCollector:
             'maxdisk': GaugeMetricFamily(
                 'pve_disk_size_bytes',
                 'Size of storage device',
-                labels=['id']),
+                labels=['id', 'type', 'storage', 'node']),
             'disk': GaugeMetricFamily(
                 'pve_disk_usage_bytes',
                 'Disk usage in bytes',
@@ -180,11 +179,11 @@ class ClusterResourcesCollector:
             'maxmem': GaugeMetricFamily(
                 'pve_memory_size_bytes',
                 'Size of memory',
-                labels=['id']),
+                labels=['id', 'node', 'type']),
             'mem': GaugeMetricFamily(
                 'pve_memory_usage_bytes',
                 'Memory usage in bytes',
-                labels=['id']),
+                labels=['id', 'node', 'type']),
             'netout': GaugeMetricFamily(
                 'pve_network_transmit_bytes',
                 'Number of bytes transmitted over the network',
@@ -204,11 +203,11 @@ class ClusterResourcesCollector:
             'cpu': GaugeMetricFamily(
                 'pve_cpu_usage_ratio',
                 'CPU usage (value between 0.0 and pve_cpu_usage_limit)',
-                labels=['id']),
+                labels=['id', 'node', 'type']),
             'maxcpu': GaugeMetricFamily(
                 'pve_cpu_usage_limit',
                 'Maximum allowed CPU usage',
-                labels=['id']),
+                labels=['id', 'node', 'type']),
             'uptime': GaugeMetricFamily(
                 'pve_uptime_seconds',
                 'Number of seconds since the last boot',
@@ -252,10 +251,11 @@ class ClusterResourcesCollector:
                 label_values = [resource.get(key, '') for key in info_lookup[restype]['labels']]
                 info_lookup[restype]['gauge'].add_metric(label_values, 1)
 
-            label_values = [resource['id']]
             for key, metric_value in resource.items():
                 if key in metrics:
-                    metrics[key].add_metric(label_values, metric_value)
+                    metric = metrics[key]
+                    label_values = [resource[labelname] for labelname in metric._labelnames if labelname in resource]
+                    metric.add_metric(label_values, metric_value)
 
         return itertools.chain(metrics.values(), info_metrics.values())
 
@@ -294,7 +294,7 @@ class ClusterNodeConfigCollector:
                 for vmdata in self._pve.nodes(node['node']).qemu.get():
                     config = self._pve.nodes(node['node']).qemu(vmdata['vmid']).config.get().items()
                     for key, metric_value in config:
-                        label_values = [f"{vmtype}/{vmdata['vmid']}", node['node'], vmtype]
+                        label_values = ["%s/%s" % (vmtype, vmdata['vmid']), node['node'], vmtype]
                         if key in metrics:
                             metrics[key].add_metric(label_values, metric_value)
                 # LXC
@@ -302,7 +302,7 @@ class ClusterNodeConfigCollector:
                 for vmdata in self._pve.nodes(node['node']).lxc.get():
                     config = self._pve.nodes(node['node']).lxc(vmdata['vmid']).config.get().items()
                     for key, metric_value in config:
-                        label_values = [f"{vmtype}/{vmdata['vmid']}", node['node'], vmtype]
+                        label_values = ["%s/%s" % (vmtype, vmdata['vmid']), node['node'], vmtype]
                         if key in metrics:
                             metrics[key].add_metric(label_values, metric_value)
 
@@ -317,123 +317,110 @@ class ClusterNodeConfigCollector:
 
 class SnapshotsCollector:
     """
-    Collects info about QEMU VM Snapshots
+    test
     """
     def __init__(self,pve):
         self._pve = pve
 
     def collect(self):
-        snapshots_metrics = GaugeMetricFamily(
+        metrics = GaugeMetricFamily(
             'pve_snapshots',
             'Proxmox VM Snapshot',
-            labels=['id', 'node', 'description','name','vmstate','vmname'])#snaptime
+            labels=['id', 'node', 'description','name','vmstate','snaptime'])
+        # snapshots_report = GaugeMetricFamily(
+        #     'pve_snapshot','Proxmox VM Snapshot',
+        #     labels=['id','node','description','name','vmstate'])
         
         for node in self._pve.nodes.get():
-            #print(node)
             try:
+                #vmtype = 'qemu'
                 for vmdata in self._pve.nodes(node['node']).qemu.get():
-                    #print(vmdata)
                     snapshots = self._pve.nodes(node['node']).qemu(vmdata['vmid']).snapshot.get()
-                    for snapshot in snapshots:
-                        #print (snapshot)
+                    for snapshot in snapshots:    
+                        #snapshot = tmpsnapshot.items()
                         if snapshot['name'] != 'current':
-                            label_values = [f'{vmdata["vmid"]}',node['node'],snapshot['description'],snapshot['name'],f'{snapshot["vmstate"]}',vmdata['name']]#,f'{snapshot["snaptime"]}'
-                            snapshots_metrics.add_metric(label_values,snapshot["snaptime"])
+                                
+
+                        # for key, metric_value in snapshot.items():
+                        #     print("%s %s",key,metric_value)
+                        #     if key == 'name' and metric_value == 'current':
+                        #         continue
+                        #     else:
+
+                        # if (snapshot['name'] == 'current'):
+                        #     continue
+                        #print(dir(snapshot.items()))
+                        #print(snapshot.__dir__())
+                        #print(snapshot)
+                        #for key, metric_value in snapshot.items():
+                        # snapshots_report.add_metric([vmdata['vmid'],node['node'],
+                        #     snapshot['description'],
+                        #     snapshot['name'],snapshot['vmstate']],1, snapshot['snaptime'])
+                                print (snapshot)
+                                label_values = [vmdata['vmid'],node['node'],snapshot['description'],snapshot['name'],snapshot['vmstate'],snapshot['snaptime']]
+                                print (label_values)
+                                #if key in metrics:
+                                    #print('catched key')
+                                metrics.add_metric(label_values,1)
+
+
             except ResourceException:
                 self._log.exception(
                     "Exception thrown while scraping quemu/lxc snapshots from %s",
                     node['node']
                 )
                 continue
-        return [snapshots_metrics]
+        
+        return metrics
 
-
-
-
-class BackupStorageCollector:
+class VolumesCollector(Collector):
     """
-    Collects Proxmox VE backups from pbs storage,
-    needs PVEDataStoreAdmin permission (maybe lower, but i stopped at this level) on said pbs storage
-
-    # HELP pve_backups Backups info
-    # TYPE pve_backups gauge
-    pve_backups{id=;size=;state=;timestamp=;vmname=} 1.0
-
+    Collects info on volume sizes - the storage disk usage may not reflect the commitments
+    in case of thin allocation.
     """
-
     def __init__(self, pve):
         self._pve = pve
 
-    def collect(self): # pylint: disable=missing-docstring
-        cluster_min = int(self._pve.cluster.options.get()["next-id"]["lower"])
-        cluster_max = int(self._pve.cluster.options.get()["next-id"]["upper"])
-        pools_vmid = {}
-        backups_vmid = []
-        pools_vms=[]
-        backup_storage_labels = ['avail','used','used_fraction','storage','shared','active']
-        backups_labels = ['vmname','size','timestamp','id','state','storage','pool']
-        info_missing_backups = GaugeMetricFamily(
-            'pve_missing_backups',
-            'VM is in pool but no backup finded',
-            labels=['vmid','vmname','status','node','pool']
+    def collect(self):  # pylint: disable=missing-docstring
+        disk_size = GaugeMetricFamily(
+            'pve_volume_size_bytes',
+            'Proxmox volume commitments',
+            labels=['id', 'node', 'storage']
         )
-        info_backup_storage = GaugeMetricFamily(
-            'pve_backup_storage',
-            'metrics for PBS',
-            labels = backup_storage_labels)
-        info_orphaned_backups = GaugeMetricFamily(
-            'pve_orphaned_backups',
-            'VM is with backup but not in pool',
-            labels = backups_labels)
-        info_backups_metrics = GaugeMetricFamily(
-            'pve_backups',
-            'Backups info',
-            labels=backups_labels)
-        for pool in self._pve.pools.get():
-            for pool_vm in self._pve.pools(pool['poolid']).get()['members']:
-                pools_vmid[pool_vm['vmid']]=pool['poolid']
-                pools_vms.append(pool_vm)    
-        node = random.choice(self._pve.nodes.get())
-        for pbs_storage in [entry for entry in self._pve.nodes(node['node']).storage.get() if entry['type'] == 'pbs']:
-            if pbs_storage:
-                #for label in info_backup_storage.labels:
-                label_values = [str(pbs_storage[key]) for key in backup_storage_labels]
-                if label_values:
-                    info_backup_storage.add_metric(label_values,1)
-                pbs_backups = self._pve.nodes(node['node']).storage(pbs_storage['storage']).content.get()
-                if pbs_backups:
-                    for pbs_backup in pbs_backups:
-                        backups_vmid.append(pbs_backup['vmid'])
-                        if pbs_backup["vmid"] < cluster_max and pbs_backup["vmid"] > cluster_min:
-                            if 'notes' in pbs_backup.keys():
-                                vm_backup_note = pbs_backup['notes']
-                            else:
-                                vm_backup_note = f'{pbs_backup["vmid"]}'
-                            if 'verification' in pbs_backup:
-                                verification = pbs_backup['verification']['state']
-                            else:
-                                verification = 'none'
-                            if pbs_backup['vmid'] not in pools_vmid.keys():
-                                info_orphaned_backups.add_metric((vm_backup_note,f'{pbs_backup["size"]}',f'{pbs_backup["ctime"]}',f'{pbs_backup["vmid"]}',verification,pbs_storage['storage'],'none'), 1)
-                            else:
-                                info_backups_metrics.add_metric((vm_backup_note,f'{pbs_backup["size"]}',f'{pbs_backup["ctime"]}',f'{pbs_backup["vmid"]}',verification,pbs_storage['storage'],pools_vmid[pbs_backup["vmid"]]), 1)
-        for pools_vm in pools_vms:
-            if pools_vm['vmid'] not in backups_vmid:
-                info_missing_backups.add_metric((f'{pools_vm["vmid"]}',pools_vm['name'],pools_vm['status'],pools_vm['node'],pools_vmid[pools_vm['vmid']]),1)
-        bkp_metrics={
-            'orphaned_backups': info_orphaned_backups, 
-            'backup_storage': info_backup_storage,
-            'missing_backups': info_missing_backups,
-            'backups_metrics': info_backups_metrics
-        }
-        #bkp_metrics = itertools.chain(info_backups_metrics_2,info_backups_metrics)
-        return bkp_metrics.values()#info_backups_metrics
+        seen_shared_storages = set()
+        for node in self._pve.nodes.get():
+            # The nodes/{node} api call will result in requests being forwarded
+            # from the api node to the target node. Those calls can fail if the
+            # target node is offline or otherwise unable to respond to the
+            # request. In that case it is better to just skip scraping the
+            # config for guests on that particular node and continue with the
+            # next one in order to avoid failing the whole scrape.
+            try:
+                storage_api = self._pve.nodes(node['node']).storage
+                for storage in storage_api.get():
+                    if not (storage['type'] != 'dir' and storage['active']):
+                        continue
+                    if storage['shared'] and storage['storage'] in seen_shared_storages:
+                        continue
+                    else:
+                        seen_shared_storages.add(storage['storage'])
+
+                    for disk in storage_api(storage['storage']).content.get():
+                        disk_size.add_metric([f'disk/{node["node"]}/{disk["volid"]}', node['node'],
+                                              storage['storage']], disk['size'])
+            except ResourceException:
+                self._log.exception(
+                    "Exception thrown while scraping quemu/lxc config from %s",
+                    node['node']
+                )
+                continue
+        return [disk_size]
 
 
 def collect_pve(config, host, options: CollectorsOptions):
     """Scrape a host and return prometheus text format for it"""
 
-    pve = ProxmoxAPI(host, **config,timeout=25)
+    pve = ProxmoxAPI(host, **config)
 
     registry = CollectorRegistry()
     if options.status:
@@ -448,8 +435,9 @@ def collect_pve(config, host, options: CollectorsOptions):
         registry.register(ClusterNodeConfigCollector(pve))
     if options.version:
         registry.register(VersionCollector(pve))
+    if options.volumes:
+        registry.register(VolumesCollector(pve))
     if options.snapshots:
         registry.register(SnapshotsCollector(pve))
-    if options.backups:
-        registry.register(BackupStorageCollector(pve))
+
     return generate_latest(registry)
