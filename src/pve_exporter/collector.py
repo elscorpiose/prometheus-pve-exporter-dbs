@@ -22,6 +22,7 @@ CollectorsOptions = collections.namedtuple('CollectorsOptions', [
     'resources',
     'config',
     'volumes',
+    'snapshots'
 ])
 
 class StatusCollector:
@@ -314,6 +315,63 @@ class ClusterNodeConfigCollector:
 
         return metrics.values()
 
+class SnapshotsCollector:
+    """
+    test
+    """
+    def __init__(self,pve):
+        self._pve = pve
+
+    def collect(self):
+        metrics = GaugeMetricFamily(
+            'pve_snapshots',
+            'Proxmox VM Snapshot',
+            labels=['id', 'node', 'description','name','vmstate','snaptime'])
+        # snapshots_report = GaugeMetricFamily(
+        #     'pve_snapshot','Proxmox VM Snapshot',
+        #     labels=['id','node','description','name','vmstate'])
+        
+        for node in self._pve.nodes.get():
+            try:
+                #vmtype = 'qemu'
+                for vmdata in self._pve.nodes(node['node']).qemu.get():
+                    snapshots = self._pve.nodes(node['node']).qemu(vmdata['vmid']).snapshot.get()
+                    for snapshot in snapshots:    
+                        #snapshot = tmpsnapshot.items()
+                        if snapshot['name'] != 'current':
+                                
+
+                        # for key, metric_value in snapshot.items():
+                        #     print("%s %s",key,metric_value)
+                        #     if key == 'name' and metric_value == 'current':
+                        #         continue
+                        #     else:
+
+                        # if (snapshot['name'] == 'current'):
+                        #     continue
+                        #print(dir(snapshot.items()))
+                        #print(snapshot.__dir__())
+                        #print(snapshot)
+                        #for key, metric_value in snapshot.items():
+                        # snapshots_report.add_metric([vmdata['vmid'],node['node'],
+                        #     snapshot['description'],
+                        #     snapshot['name'],snapshot['vmstate']],1, snapshot['snaptime'])
+                                print (snapshot)
+                                label_values = [vmdata['vmid'],node['node'],snapshot['description'],snapshot['name'],snapshot['vmstate'],snapshot['snaptime']]
+                                print (label_values)
+                                #if key in metrics:
+                                    #print('catched key')
+                                metrics.add_metric(label_values,1)
+
+
+            except ResourceException:
+                self._log.exception(
+                    "Exception thrown while scraping quemu/lxc snapshots from %s",
+                    node['node']
+                )
+                continue
+        
+        return metrics
 
 class VolumesCollector(Collector):
     """
@@ -379,5 +437,7 @@ def collect_pve(config, host, options: CollectorsOptions):
         registry.register(VersionCollector(pve))
     if options.volumes:
         registry.register(VolumesCollector(pve))
+    if options.snapshots:
+        registry.register(SnapshotsCollector(pve))
 
     return generate_latest(registry)

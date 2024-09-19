@@ -85,6 +85,9 @@ def main():
     parser.add_argument('--collector.volumes', dest='collector_volumes',
                         action=BooleanOptionalAction, default=True,
                         help='Exposes PVE VM resource commitments')
+    parser.add_argument('--collector.snapshots', dest='collector_snapshots',
+                        action=BooleanOptionalAction, default=True,
+                        help='Exposes PVE VM VM Snapshots')
     parser.add_argument('config', nargs='?', default='pve.yml',
                         help='Path to configuration file (pve.yml)')
     parser.add_argument('port', nargs='?', type=int, default='9221',
@@ -104,6 +107,7 @@ def main():
         resources=params.collector_resources,
         config=params.collector_config,
         volumes=params.collector_volumes,
+        snapshots=params.collector_snapshots
     )
 
     # Load configuration.
@@ -117,7 +121,7 @@ def main():
         'bind': f'{params.address}:{params.port}',
         'threads': 2,
         'keyfile': params.server_keyfile,
-        'certfile': params.server_certfile,
+        'certfile': params.server_certfile
     }
 
     if config.valid:
