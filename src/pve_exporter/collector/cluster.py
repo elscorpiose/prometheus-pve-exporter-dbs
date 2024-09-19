@@ -292,7 +292,7 @@ class BackupStorageCollector:
     def __init__(self, pve):
         self._pve = pve
 
-    def collect(self): # pylint: disable=missing-docstring
+    def collect(self):# pylint: disable=too-many-locals
         cluster_min = int(self._pve.cluster.options.get()["next-id"]["lower"])
         cluster_max = int(self._pve.cluster.options.get()["next-id"]["upper"])
         pools_vmid = {}
@@ -320,9 +320,9 @@ class BackupStorageCollector:
         for pool in self._pve.pools.get():
             for pool_vm in self._pve.pools(pool['poolid']).get()['members']:
                 pools_vmid[pool_vm['vmid']]=pool['poolid']
-                pools_vms.append(pool_vm)    
+                pools_vms.append(pool_vm)
         node = random.choice(self._pve.nodes.get())
-        for pbs_storage in [entry for entry in self._pve.nodes(node['node']).storage.get() if entry['type'] == 'pbs']:
+        for pbs_storage in [entry for entry in self._pve.nodes(node['node']).storage.get() if entry['type'] == 'pbs']:# pylinter: disable=too-many-nested-blocks
             if pbs_storage:
                 #for label in info_backup_storage.labels:
                 label_values = [str(pbs_storage[key]) for key in backup_storage_labels]
@@ -341,7 +341,7 @@ class BackupStorageCollector:
                                 verification = pbs_backup['verification']['state']
                             else:
                                 verification = 'none'
-                            if pbs_backup['vmid'] not in pools_vmid.keys():
+                            if pbs_backup['vmid'] not in pools_vmid.keys():# pylint: disable=consider-iterating-dictionar
                                 info_orphaned_backups.add_metric((vm_backup_note,f'{pbs_backup["size"]}',f'{pbs_backup["ctime"]}',f'{pbs_backup["vmid"]}',verification,pbs_storage['storage'],'none'), 1)
                             else:
                                 info_backups_metrics.add_metric((vm_backup_note,f'{pbs_backup["size"]}',f'{pbs_backup["ctime"]}',f'{pbs_backup["vmid"]}',verification,pbs_storage['storage'],pools_vmid[pbs_backup["vmid"]]), 1)
