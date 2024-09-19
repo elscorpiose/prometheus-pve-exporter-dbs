@@ -7,7 +7,6 @@ import time
 from functools import partial
 
 import gunicorn.app.base
-import gunicorn.app.base
 from prometheus_client import CONTENT_TYPE_LATEST, Summary, Counter, generate_latest
 from werkzeug.routing import Map, Rule
 from werkzeug.wrappers import Request, Response
@@ -19,8 +18,6 @@ class PveExporterApplication:
     """
     Proxmox VE prometheus collector HTTP handler.
     """
-
-    # pylint: disable=no-self-use
 
     def __init__(self, config, duration, errors, collectors):
         self._config = config
