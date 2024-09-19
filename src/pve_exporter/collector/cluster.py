@@ -2,6 +2,9 @@
 Prometheus collecters for Proxmox VE cluster.
 """
 # pylint: disable=too-few-public-methods
+# pylint: disable=missing-docstring
+# pylint: disable=line-too-long
+
 import random
 import itertools
 
@@ -289,7 +292,7 @@ class BackupStorageCollector:
     def __init__(self, pve):
         self._pve = pve
 
-    def collect(self): # pylint: disable=missing-docstring disable=line-too-long
+    def collect(self): # pylint: disable=missing-docstring
         cluster_min = int(self._pve.cluster.options.get()["next-id"]["lower"])
         cluster_max = int(self._pve.cluster.options.get()["next-id"]["upper"])
         pools_vmid = {}
