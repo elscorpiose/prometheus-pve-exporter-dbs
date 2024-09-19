@@ -9,7 +9,7 @@ node for use by the Prometheus monitoring system.
 Installation
 ------------
 
-Note: Python 2 is not supported anymore as of version 2.0.0. Instead use Python 3.6 or better.
+Requires Python 3.9 or better.
 
 Using pip:
 ==========
@@ -37,7 +37,7 @@ Example: Run the image with a mounted configuration file and published port:
 
 .. code:: shell
 
-   docker run --name prometheus-pve-exporter -d -p 127.0.0.1:9221:9221 -v /path/to/pve.yml:/etc/pve.yml prompve/prometheus-pve-exporter
+   docker run --init --name prometheus-pve-exporter -d -p 127.0.0.1:9221:9221 -v /path/to/pve.yml:/etc/prometheus/pve.yml prompve/prometheus-pve-exporter
 
 Prometheus PVE Exporter will now be reachable at http://localhost:9221/.
 
@@ -46,37 +46,60 @@ Usage
 
 ::
 
-    usage: pve_exporter [-h] [--collector.status] [--collector.version]
-                        [--collector.node] [--collector.cluster]
-                        [--collector.resources] [--collector.config]
-                        [config] [port] [address]
+    usage: pve_exporter [-h] [--collector.status | --no-collector.status]
+                        [--collector.version | --no-collector.version]
+                        [--collector.node | --no-collector.node]
+                        [--collector.cluster | --no-collector.cluster]
+                        [--collector.resources | --no-collector.resources]
+                        [--collector.config | --no-collector.config]
+                        [--collector.replication | --no-collector.replication]
+                        [--config.file CONFIG_FILE]
+                        [--web.listen-address WEB_LISTEN_ADDRESS]
+                        [--server.keyfile SERVER_KEYFILE]
+                        [--server.certfile SERVER_CERTFILE]
 
-    positional arguments:
-      config                Path to configuration file (pve.yml)
-      port                  Port on which the exporter is listening (9221)
-      address               Address to which the exporter will bind
-
-    optional arguments:
+    options:
       -h, --help            show this help message and exit
+      --config.file CONFIG_FILE
+                            Path to config file (/etc/prometheus/pve.yml)
+      --web.listen-address WEB_LISTEN_ADDRESS
+                            Address on which to expose metrics and web server.
+                            ([::]:9221)
+      --server.keyfile SERVER_KEYFILE
+                            SSL key for server
+      --server.certfile SERVER_CERTFILE
+                            SSL certificate for server
+
+    cluster collectors:
+      cluster collectors are run if the url parameter cluster=1 is set and
+      skipped if the url parameter cluster=0 is set on a scrape url.
+
       --collector.status, --no-collector.status
-                            Exposes Node/VM/CT-Status (default: True)
+                            Exposes Node/VM/CT-Status
       --collector.version, --no-collector.version
-                            Exposes PVE version info (default: True)
+                            Exposes PVE version info
       --collector.node, --no-collector.node
-                            Exposes PVE node info (default: True)
+                            Exposes PVE node info
       --collector.cluster, --no-collector.cluster
-                            Exposes PVE cluster info (default: True)
+                            Exposes PVE cluster info
       --collector.resources, --no-collector.resources
-                            Exposes PVE resources info (default: True)
+                            Exposes PVE resources info
+
+    node collectors:
+      node collectors are run if the url parameter node=1 is set and skipped if
+      the url parameter node=0 is set on a scrape url.
+
       --collector.config, --no-collector.config
-                            Exposes PVE onboot status (default: True)
+                            Exposes PVE onboot status
+      --collector.replication, --no-collector.replication
+                            Exposes PVE replication info
 
 
-Use `::` for the `address` argument in order to bind to both IPv6 and IPv4
-sockets on dual stacked machines.
+Use `[::]` in the `--web.listen-address` flag in order to bind to both IPv6 and
+IPv4 sockets on dual stacked machines.
 
-Visit http://localhost:9221/pve?target=1.2.3.4 where 1.2.3.4 is the IP
-of the Proxmox VE node to get metrics from. Specify the ``module``
+Visit http://localhost:9221/pve?target=1.2.3.4&cluster=1&node=1 where 1.2.3.4
+is the IP of the Proxmox VE node to get metrics from. Specify the ``module``
 request parameter, to choose which module to use from the config file.
 
 The ``target`` request parameter defaults to ``localhost``. Hence if
@@ -156,7 +179,7 @@ Here's an example of the metrics exported.
     pve_storage_shared{id="storage/proxmox/vms"} 0.0
     # HELP pve_guest_info VM/CT info
     # TYPE pve_guest_info gauge
-    pve_guest_info{id="qemu/100",name="samplevm1",node="proxmox",type="qemu"} 1.0
+    pve_guest_info{id="qemu/100",name="samplevm1",node="proxmox",type="qemu",tags="tag1;tag2"} 1.0
     # HELP pve_storage_info Storage info
     # TYPE pve_storage_info gauge
     pve_storage_info{id="storage/proxmox/local",node="proxmox",storage="local"} 1.0
@@ -171,6 +194,24 @@ Here's an example of the metrics exported.
     # HELP pve_version_info Proxmox VE version info
     # TYPE pve_version_info gauge
     pve_version_info{release="7.1",repoid="6fe299a0",version="7.1-5"} 1.0
+    # HELP pve_replication_duration_seconds Proxmox vm replication duration
+    # TYPE pve_replication_duration_seconds gauge
+    pve_replication_duration_seconds{id="1-0"} 7.73584
+    # HELP pve_replication_last_sync_timestamp_seconds Proxmox vm replication last_sync
+    # TYPE pve_replication_last_sync_timestamp_seconds gauge
+    pve_replication_last_sync_timestamp_seconds{id="1-0"} 1.713382503e+09
+    # HELP pve_replication_last_try_timestamp_seconds Proxmox vm replication last_try
+    # TYPE pve_replication_last_try_timestamp_seconds gauge
+    pve_replication_last_try_timestamp_seconds{id="1-0"} 1.713382503e+09
+    # HELP pve_replication_next_sync_timestamp_seconds Proxmox vm replication next_sync
+    # TYPE pve_replication_next_sync_timestamp_seconds gauge
+    pve_replication_next_sync_timestamp_seconds{id="1-0"} 1.7134689e+09
+    # HELP pve_replication_failed_syncs Proxmox vm replication fail_count
+    # TYPE pve_replication_failed_syncs gauge
+    pve_replication_failed_syncs{id="1-0"} 0.0
+    # HELP pve_replication_info Proxmox vm replication info
+    # TYPE pve_replication_info gauge
+    pve_replication_info{guest="qemu/1",id="1-0",source="node/proxmox1",target="node/proxmox2",type="local"} 1.0
 
 Authentication
 --------------
@@ -236,7 +277,7 @@ Proxmox VE Configuration
 For security reasons it is essential to add a user with read-only access
 (PVEAuditor role) for the purpose of metrics collection.
 
-Refer to the  `Proxmox Documentation`_ for the several ways of creating a user. 
+Refer to the  `Proxmox Documentation`_ for the several ways of creating a user.
 Once created, assign the user the `/` path permission.
 
 Prometheus Configuration
@@ -258,6 +299,8 @@ Example config for PVE exporter running on PVE node:
         metrics_path: /pve
         params:
           module: [default]
+          cluster: ['1']
+          node: ['1']
 
 Example config for PVE exporter running on Prometheus host:
 
@@ -272,6 +315,8 @@ Example config for PVE exporter running on Prometheus host:
         metrics_path: /pve
         params:
           module: [default]
+          cluster: ['1']
+          node: ['1']
         relabel_configs:
           - source_labels: [__address__]
             target_label: __param_target
@@ -279,6 +324,29 @@ Example config for PVE exporter running on Prometheus host:
             target_label: instance
           - target_label: __address__
             replacement: 127.0.0.1:9221  # PVE exporter.
+
+**Note on alerting:**
+
+You can do VM tag based alerting, by using joins on ``pve_guest_info`` metric. For
+example, alerting only when VM with `critical` tag is down:
+
+.. code:: promql
+
+   (pve_guest_info{tags=~".*critical.*"} * on(id) group_left(name) pve_up{}) == 0
+
+**Note on scraping large clusters:**
+
+It is adviced to setup separate jobs to collect ``cluster`` metrics and
+``node`` metrics in larger deployments. Scraping any node in a cluster with the
+url params set to ``cluster=1&node=0`` results in the same set of metrics. Hence
+cluster metrics can be scraped efficiently from a single node or from a subset
+of cluster nodes (e.g., a different node selected on every scrape via
+round-robin DNS).
+
+Node metrics can only be scraped from a given node. In order to compile a
+complete set of node metrics it is necessary to scrape every node in a cluster
+with url params set to ``cluster=0&node=1``.
+
 
 Grafana Dashboards
 ------------------
