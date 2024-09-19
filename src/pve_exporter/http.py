@@ -118,7 +118,7 @@ class PveExporterApplication:
         return urls.dispatch(view_func, catch_http_exceptions=True)
 
 
-class StandaloneGunicornApplication(gunicorn.app.base.BaseApplication):
+class StandaloneGunicornApplication(gunicorn.app.base.BaseApplication):#pylint: disable=abstract-method
     """
     Copy-paste from https://docs.gunicorn.org/en/stable/custom.html
     """
