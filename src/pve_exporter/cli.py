@@ -102,5 +102,6 @@ def main():
 
     if config.valid:
         start_http_server(config, gunicorn_options, collectors)
+        start_http_server(config, gunicorn_options, collectors)
     else:
         parser.error(str(config))

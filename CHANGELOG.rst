@@ -465,27 +465,7 @@ Added
 
 .. _Keep a Changelog: http://keepachangelog.com/en/1.0.0/
 .. _Semantic Versioning: http://semver.org/spec/v2.0.0.html
-.. _Unreleased: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v3.4.5...HEAD
-.. _3.4.5: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v3.4.4...v3.4.5
-.. _3.4.4: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v3.4.3...v3.4.4
-.. _3.4.3: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v3.4.2...v3.4.3
-.. _3.4.2: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v3.4.1...v3.4.2
-.. _3.4.1: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v3.4.0...v3.4.1
-.. _3.4.0: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v3.3.0...v3.4.0
-.. _3.3.0: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v3.2.5...v3.3.0
-.. _3.2.5: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v3.2.4...v3.2.5
-.. _3.2.4: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v3.2.3...v3.2.4
-.. _3.2.3: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v3.2.2...v3.2.3
-.. _3.2.2: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v3.2.1...v3.2.2
-.. _3.2.1: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v3.2.0...v3.2.1
-.. _3.2.0: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v3.1.0...v3.2.0
-.. _3.1.0: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v3.0.2...v3.1.0
-.. _3.0.2: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v3.0.1...v3.0.2
-.. _3.0.1: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v3.0.0...v3.0.1
-.. _3.0.0: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v3.0.0b1...v3.0.0
-.. _3.0.0b1: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v2.3.1...v3.0.0b1
-.. _2.3.1: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v2.3.0...v2.3.1
-.. _2.3.0: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v2.2.4...v2.3.0
+.. _Unreleased: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v2.2.4...HEAD
 .. _2.2.3: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v2.2.3...v2.2.4
 .. _2.2.3: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v2.2.2...v2.2.3
 .. _2.2.2: https://github.com/prometheus-pve/prometheus-pve-exporter/compare/v2.2.1...v2.2.2

@@ -7,6 +7,7 @@ import time
 from functools import partial
 
 import gunicorn.app.base
+import gunicorn.app.base
 from prometheus_client import CONTENT_TYPE_LATEST, Summary, Counter, generate_latest
 from werkzeug.routing import Map, Rule
 from werkzeug.wrappers import Request, Response
@@ -47,6 +48,7 @@ class PveExporterApplication:
             response.headers['content-type'] = CONTENT_TYPE_LATEST
             self._duration.labels(module).observe(time.time() - start)
         else:
+            response = Response("Module '{module}' not found in config")
             response = Response("Module '{module}' not found in config")
             response.status_code = 400
 
@@ -163,4 +165,5 @@ def start_http_server(config, gunicorn_options, collectors):
         duration.labels(module)
 
     app = PveExporterApplication(config, duration, errors, collectors)
+    StandaloneGunicornApplication(app, gunicorn_options).run()
     StandaloneGunicornApplication(app, gunicorn_options).run()
